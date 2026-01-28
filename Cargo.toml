@@ -5,6 +5,7 @@ edition = "2024"
 
 repository = "https://github.com/VoxeJ/trigivs"
 license = "MIT"
+license-file = "LICENSE.md"
 readme = "README.md"
 
 keywords = ["tridiagonal", "no_std", "linear", "equations", "solver"]
