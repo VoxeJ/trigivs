@@ -3,6 +3,7 @@ name = "trigivs"
 version = "0.1.0"
 edition = "2024"
 
+authors = ["Yuzariy"]
 repository = "https://github.com/VoxeJ/trigivs"
 license = "MIT"
 license-file = "LICENSE.md"
