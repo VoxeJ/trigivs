@@ -3,6 +3,13 @@ name = "trigivs"
 version = "0.1.0"
 edition = "2024"
 
+repository = "https://github.com/VoxeJ/trigivs"
+license = "MIT"
+readme = "README.md"
+
+keywords = ["tridiagonal", "no_std", "linear", "equations", "solver"]
+categories = ["mathematics", "algorithms"]
+
 [features]
 default = ["std"]
 std = ["alloc", "num-traits/std"]

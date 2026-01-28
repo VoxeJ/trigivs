@@ -2,13 +2,14 @@
 
 //! # trigivs
 //! 
-//! This library provides a solver for tridiagonal systems of linear equations.
+//! This library provides a solver for tridiagonal systems of linear equations that works through Givens rotations.
 //! It's behavious is governed by several features
 //!
-//! # Features
+//! # Modes of operation
 //! 
-//! - `std`: Default mode of operation. Uses heap allocation and `Vec<T>` outputs
-//! - `alloc`: Works the same as `std`, but works in `no_std` environments and returns `Box<T>`
+//! - `std`: Default mode. Uses standard heap allocation.
+//! - `alloc`: The same as `std`, but works in `no_std` environments and requires a supplied allocator.
+//! - `no_std`: Achieved through disabling all default features. Does not use heap allocation.
 
 pub mod prelude {
     pub use crate::solver_error::SolverErrors;
