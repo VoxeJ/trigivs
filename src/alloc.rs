@@ -249,3 +249,5 @@ impl<T: Float> TridiagonalSystemPrecomputed<T> {
         )
     }
 }
+
+//pub fn refine_solution_

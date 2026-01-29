@@ -21,10 +21,10 @@ use core::mem::swap;
 /// let rhs1 = [-3., 21.];
 /// let rhs2 = [-23., 5.];
 /// 
-/// let precomputed = precompute_givens(&sup, &diag, &sub);
+/// let precomputed = trigivs::prelude::precompute_givens(&sup, &diag, &sub).unwrap();
 /// 
-/// let x1 = precomp.solve_givens_rhs(&rhs1).unwrap();
-/// let x2 = precomp.solve_givens_rhs(&rhs2).unwrap();
+/// let x1 = precomputed.solve_givens_rhs(&rhs1).unwrap();
+/// let x2 = precomputed.solve_givens_rhs(&rhs2).unwrap();
 /// ```
 #[derive(Clone, Debug)]
 pub struct TridiagonalSystemPrecomputed<T: Float, const D: usize, const S: usize> {
@@ -84,7 +84,7 @@ pub fn solve_givens<T: Float, const D: usize, const S: usize>(sup: &[T; S], diag
     let mut rhs = rhs.clone();
 
     let mut ur = [T::zero(); S];
-    let u = if S > 1 {&mut ur[..S-2]} else {&mut []};
+    let u = if S > 1 {&mut ur[..S-1]} else {&mut []};
 
     for i in 0..(D - 1) {
         let bi = sub[i];
@@ -149,11 +149,11 @@ pub fn precompute_givens<T: Float, const D: usize, const S: usize>(sup: &[T; S],
     let mut d = diag.clone();
 
     let mut ur = [T::zero(); S];
-    let u = if S > 1 {&mut ur[..S-2]} else {&mut []};
+    let u = if S > 1 {&mut ur[..S-1]} else {&mut []};
 
     let mut sins_cosins = [(T::zero(), T::zero()); S];
 
-    for i in 0..(n - 1) {
+    for i in 0..(D - 1) {
         let bi = sub[i];
         let di = d[i];
 
