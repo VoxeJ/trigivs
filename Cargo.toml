@@ -1,7 +1,7 @@
 [package]
 description = "Rust library for solving tridiagonal systems of linear equations using Givens rotations"
 name = "trigivs"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 
 authors = ["Yuzariy"]
@@ -13,7 +13,7 @@ keywords = ["tridiagonal", "no_std", "linear", "equations", "solver"]
 categories = ["mathematics", "algorithms"]
 
 [features]
-default = []
+default = ["std"]
 std = ["alloc", "num-traits/std"]
 alloc = []
 

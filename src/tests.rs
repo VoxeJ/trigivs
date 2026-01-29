@@ -190,3 +190,46 @@ fn test_invalid_rhs_precomp(){
 
     assert!(matches!(result, Err(SolverErrors::InvalidRhsSizing)));
 }
+
+#[test]
+fn test_solution_norm(){
+    let sup = [4., 7., 7., 100.];
+    let diag = [1., 3., 6., 4., 12.];
+    let sub = [2., 5., 10., 90.];
+    
+    let rhs = [-7., 17., -20., 514., -300.];
+    let rhs_wrong = [-7., 17., -20., 514., -302.];
+    
+    let result = solve_givens(&sup, &diag, &sub, &rhs).unwrap();
+    let norm = compute_solution_norm(&sup, &diag, &sub, &rhs_wrong, &result).unwrap();
+
+    assert_abs_diff_eq!(norm, 2., epsilon=1e-6);
+}
+
+#[test]
+fn test_1n_solution_norm(){
+    let diag = [2.];
+
+    let rhs = [10.];
+    let rhs_wrong = [12.];
+    
+    let result = solve_givens(&[], &diag, &[], &rhs).unwrap();
+    let norm = compute_solution_norm(&[], &diag, &[], &rhs_wrong, &result).unwrap();
+
+    assert_abs_diff_eq!(norm, 2., epsilon=1e-6);
+}
+
+#[test]
+fn test_2n_solution_norm(){
+    let sup = [-4.];
+    let diag = [3., 2.];
+    let sub = [5.];
+    let rhs = [-3., 21.];
+
+    let rhs_wrong = [-1., 21.];
+    
+    let result = solve_givens(&sup, &diag, &sub, &rhs).unwrap();
+    let norm = compute_solution_norm(&sup, &diag, &sub, &rhs_wrong, &result).unwrap();
+
+    assert_abs_diff_eq!(norm, 2., epsilon=1e-6);
+}
