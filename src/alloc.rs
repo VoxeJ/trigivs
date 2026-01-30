@@ -39,10 +39,10 @@ pub struct TridiagonalSystemPrecomputed<T: Float> {
 /// 
 /// # Arguments 
 /// 
-/// * `sup` - superdiagonal slice
-/// * `diag` - main diagonal slice
-/// * `sub` - subdiagonal slice
-/// * `rhs` - right hand side slice
+/// * `sub` - subdiagonal elements, length n-1
+/// * `diag` - main diagonal elements, length n
+/// * `sup` - superdiagonal elements, length n-1
+/// * `rhs` - right-hand side vector, length n
 /// 
 /// # Example
 /// 
@@ -78,9 +78,9 @@ pub fn solve_givens<T: Float>(sup: &[T], diag: &[T], sub: &[T], rhs: &[T]) -> Re
 /// 
 /// # Arguments
 /// 
-/// * `sup` - superdiagonal slice
-/// * `diag` - main diagonal slice
-/// * `sub` - subdiagonal slice
+/// * `sub` - subdiagonal elements, length n-1
+/// * `diag` - main diagonal elements, length n
+/// * `sup` - superdiagonal elements, length n-1
 /// 
 /// # Example
 /// 
@@ -121,7 +121,7 @@ impl<T: Float> TridiagonalSystemPrecomputed<T> {
     /// 
     /// # Arguments
     /// 
-    /// * `rhs` - right hand side slice
+    /// * `rhs` - right-hand side vector, length n
     /// 
     /// # Example
     /// 
@@ -160,6 +160,38 @@ impl<T: Float> TridiagonalSystemPrecomputed<T> {
     }
 }
 
+/// Refines a tridiagonal system solution using the Kaczmarz iterative method with heap allocation
+/// 
+/// # Arguments
+///
+/// * `sub` - subdiagonal elements, length n-1
+/// * `diag` - main diagonal elements, length n
+/// * `sup` - superdiagonal elements, length n-1
+/// * `rhs` - right-hand side vector, length n
+/// * `x_init` - initial solution approximation, length n
+/// * `iter` - maximum number of Kaczmarz iterations to perform
+/// * `eps` - convergence tolerance
+/// 
+/// # Example
+///
+/// ```
+/// let sub = [5.];
+/// let diag = [3., 2.];
+/// let sup = [-4.];
+/// let rhs = [-3., 21.];
+/// 
+/// let x_init = [1., 1.];
+/// let x_refined = trigivs::prelude::refine_tridiag_solution_iter_kaczmarz(
+///     &sub, 
+///     &diag, 
+///     &sup, 
+///     &rhs, 
+///     &x_init, 
+///     1000, 
+///     1e-6 
+/// ).unwrap();
+/// ```
+/// 
 pub fn refine_tridiag_solution_iter_kaczmarz<T: Float>(sub: &[T], diag: &[T], sup: &[T], rhs: &[T], x_init: &[T], iter: usize, eps: T) -> Result<Vec<T>, SolverErrors>{
     let mut x = x_init.to_vec();
     let n = x.len();

@@ -54,10 +54,10 @@ fn compute_x<T: Float, const D: usize>(rhs: &[T], d: &[T], a: &[T], u: &[T]) -> 
 /// 
 /// # Arguments 
 /// 
-/// * `sup` - superdiagonal slice
-/// * `diag` - main diagonal slice
-/// * `sub` - subdiagonal slice
-/// * `rhs` - right hand side slice
+/// * `sub` - subdiagonal elements, length n-1
+/// * `diag` - main diagonal elements, length n
+/// * `sup` - superdiagonal elements, length n-1
+/// * `rhs` - right-hand side vector, length n
 /// 
 /// # Example
 /// 
@@ -91,9 +91,9 @@ pub fn solve_givens<T: Float, const D: usize, const S: usize>(sup: &[T; S], diag
 /// 
 /// # Arguments
 /// 
-/// * `sup` - superdiagonal slice
-/// * `diag` - main diagonal slice
-/// * `sub` - subdiagonal slice
+/// * `sub` - subdiagonal elements, length n-1
+/// * `diag` - main diagonal elements, length n
+/// * `sup` - superdiagonal elements, length n-1
 /// 
 /// # Example
 /// 
@@ -135,7 +135,7 @@ impl<T: Float, const D: usize, const S: usize> TridiagonalSystemPrecomputed<T, D
     /// 
     /// # Arguments
     /// 
-    /// * `rhs` - right hand side slice
+    /// * `rhs` - right-hand side vector, length n
     /// 
     /// # Example
     /// 
@@ -166,6 +166,38 @@ impl<T: Float, const D: usize, const S: usize> TridiagonalSystemPrecomputed<T, D
     }
 }
 
+/// Refines a tridiagonal system solution using the Kaczmarz iterative method without heap allocation
+/// 
+/// # Arguments
+///
+/// * `sub` - subdiagonal elements, length n-1
+/// * `diag` - main diagonal elements, length n
+/// * `sup` - superdiagonal elements, length n-1
+/// * `rhs` - right-hand side vector, length n
+/// * `x_init` - initial solution approximation, length n
+/// * `iter` - maximum number of Kaczmarz iterations to perform
+/// * `eps` - convergence tolerance
+/// 
+/// # Example
+///
+/// ```
+/// let sub = [5.];
+/// let diag = [3., 2.];
+/// let sup = [-4.];
+/// let rhs = [-3., 21.];
+/// 
+/// let x_init = [1., 1.];
+/// let x_refined = trigivs::prelude::refine_tridiag_solution_iter_kaczmarz(
+///     &sub, 
+///     &diag, 
+///     &sup, 
+///     &rhs, 
+///     &x_init, 
+///     1000, 
+///     1e-6 
+/// ).unwrap();
+/// ```
+/// 
 pub fn refine_tridiag_solution_iter_kaczmarz<T: Float, const D: usize, const S: usize>(sub: &[T; S], diag: &[T; D], sup: &[T; S], rhs: &[T; D], x_init: &[T; D], iter: usize, eps: T) -> Result<[T; D], SolverErrors>{
     
     const { assert!(D == S + 1, "Sub and sup diagonals must be exctly 1 element smaller than main diagonal") };

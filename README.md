@@ -43,58 +43,36 @@ trigivs = { version = "0.1", default-features = false, features = ["alloc"] }
 
 ## Examples
 
-### Compute the Determinant
-
 ```rust
-use trigivs::prelude::compute_tridiag_determinant;
+use trigivs::prelude::*;
 
 fn main() {
-    let sup = [-4.0];
-    let diag = [3.0, 2.0];
-    let sub = [5.0];
-    let determinant = compute_tridiag_determinant(&sup, &diag, &sub);
-    println!("Determinant: {}", determinant);
-}
-```
+    // Define a 3x3 tridiagonal system
+    let sub = [2.0, 1.0];          // subdiagonal (length n-1)
+    let diag = [3.0, 4.0, 5.0];    // main diagonal (length n)
+    let sup = [1.0, 2.0];          // superdiagonal (length n-1)
+    
+    // 1. Compute determinant
+    let det = compute_tridiag_determinant(&sup, &diag, &sub);
+    println!("Determinant: {}", det);
 
----
-
-### Solve a Tridiagonal System
-
-```rust
-use trigivs::prelude::solve_givens;
-
-fn main() {
-    let sup = [-4.0];
-    let diag = [3.0, 2.0];
-    let sub = [5.0];
-    let rhs = [-3.0, 21.0];
-    let x = solve_givens(&sup, &diag, &sub, &rhs).unwrap();
-    println!("Solution: {:?}", x);
-}
-```
-
----
-
-### Precompute a System for Multiple Right-Hand Sides
-
-```rust
-use trigivs::prelude::{precompute_givens, TridiagonalSystemPrecomputed};
-
-fn main() {
-    let sup = [-4.0];
-    let diag = [3.0, 2.0];
-    let sub = [5.0];
+    // 2. Solve directly
+    let rhs = [1.0, 2.0, 3.0];
+    let solution = solve_givens(&sup, &diag, &sub, &rhs).unwrap();
+    println!("Direct solution: {:?}", solution);
+    
+    // 3. Precompute for multiple RHS
     let precomputed = precompute_givens(&sup, &diag, &sub).unwrap();
-
-    let rhs1 = [-3.0, 21.0];
-    let rhs2 = [-23.0, 5.0];
-
-    let x1 = precomputed.solve_givens_rhs(&rhs1).unwrap();
-    let x2 = precomputed.solve_givens_rhs(&rhs2).unwrap();
-
-    println!("Solution 1: {:?}", x1);
-    println!("Solution 2: {:?}", x2);
+    let rhs2 = [4.0, 5.0, 6.0];
+    let solution2 = precomputed.solve_givens_rhs(&rhs2).unwrap();
+    println!("Solution with precomputed: {:?}", solution2);
+    
+    // 4. Refine solution iteratively
+    // NOTE: Meant for large ill-defined systems or as rare fallback
+    let refined = refine_tridiag_solution_iter_kaczmarz(
+        &sub, &diag, &sup, &rhs, &solution, 50, 1e-10
+    ).unwrap();
+    println!("Refined solution: {:?}", refined);
 }
 ```
 
