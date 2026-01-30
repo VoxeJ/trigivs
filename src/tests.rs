@@ -138,6 +138,82 @@ fn test_precom_direct_eq_solver(){
     assert_abs_diff_eq!(result1.as_ref() as &[f64], result2.as_ref(), epsilon=1e-6);
 }
 
+#[test]
+fn test_zero_sub_solver(){
+    let sup = [4., 7., 7., 100.];
+    let diag = [1., 3., 6., 4., 12.];
+    let sub = [0., 0., 0., 0.];
+    
+    let rhs = [-7., 15., -10., 484., 60.];
+
+    let result = solve_givens(&sup, &diag, &sub, &rhs).unwrap();
+    let expected = [1., -2., 3., -4., 5.];
+
+    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon=1e-6);
+}
+
+#[test]
+fn test_almost_zero_diag_solver(){
+    let sup = [4., 7., 7., 100.];
+    let diag = [0., 0., 0.5, 0., 0.];
+    let sub = [2., 5., 10., 90.];
+    
+    let rhs = [-8., 23., -36.5, 530., -360.];
+
+    let result = solve_givens(&sup, &diag, &sub, &rhs).unwrap();
+    let expected = [1., -2., 3., -4., 5.];
+
+    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon=1e-6);
+}
+
+#[test]
+fn test_zero_sub_precomp(){
+    let sup = [4., 7., 7., 100.];
+    let diag = [1., 3., 6., 4., 12.];
+    let sub = [0., 0., 0., 0.];
+    
+    let rhs = [-7., 15., -10., 484., 60.];
+
+    let precomp = precompute_givens(&sup, &diag, &sub).unwrap();
+
+    let result = precomp.solve_givens_rhs(&rhs).unwrap();
+    let expected = [1., -2., 3., -4., 5.];
+
+    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon=1e-6);
+}
+
+#[test]
+fn test_almost_zero_diag_precomp(){
+    let sup = [4., 7., 7., 100.];
+    let diag = [0., 0., 0.5, 0., 0.];
+    let sub = [2., 5., 10., 90.];
+    
+    let rhs = [-8., 23., -36.5, 530., -360.];
+
+    let precomp = precompute_givens(&sup, &diag, &sub).unwrap();
+
+    let result = precomp.solve_givens_rhs(&rhs).unwrap();
+    let expected = [1., -2., 3., -4., 5.];
+
+    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon=1e-6);
+}
+
+#[test]
+fn test_almost_zero_diag_neg_precomp(){
+    let sup = [4., 7., 7., 100.];
+    let diag = [0., 0., 0.5, 0., 0.];
+    let sub = [-2., 5., 10., 90.];
+    
+    let rhs = [-8., 19., -36.5, 530., -360.];
+
+    let precomp = precompute_givens(&sup, &diag, &sub).unwrap();
+
+    let result = precomp.solve_givens_rhs(&rhs).unwrap();
+    let expected = [1., -2., 3., -4., 5.];
+    
+    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon=1e-6);
+}
+
 #[cfg(feature = "alloc")]
 #[test]
 fn test_invalid_diag(){

@@ -4,18 +4,6 @@ use crate::solver_parts::*;
 #[cfg(not(feature = "std"))]
 extern crate alloc;
 
-#[cfg(feature = "std")]
-use std::iter;
-
-#[cfg(not(feature = "std"))]
-use core::iter;
-
-#[cfg(feature = "std")]
-use std::mem::swap;
-
-#[cfg(not(feature = "std"))]
-use core::mem::swap;
-
 #[cfg(not(feature = "std"))]
 use alloc::{vec, vec::Vec};
 
@@ -45,28 +33,6 @@ pub struct TridiagonalSystemPrecomputed<T: Float> {
     sup2: Option<Vec<T>>,
 
     sins_cosins: Option<Vec<(T, T)>>
-}
-
-#[inline]
-fn compute_x<T: Float>(rhs: &[T], d: &[T], a: &[T], u: &[T]) -> Result<Vec<T>, SolverErrors> {
-    let n = d.len();
-    let mut x: Vec<T> = iter::repeat(T::zero()).take(n).collect();
-    for i in (0..n).rev() {
-        let mut sum = T::zero();
-        if i < n - 1 {
-            sum = a[i] * x[i + 1];
-        }
-        if n > 1 && i < n - 2 {
-            sum = sum + u[i] * x[i + 2];
-        }
-        let rhs_sum = rhs[i] - sum;
-        let di = d[i];
-        if is_zero_eps_mag(di, rhs_sum) {
-            return Err(SolverErrors::DivisionByZero);
-        }
-        x[i] = (rhs_sum) / di;
-    }
-    Ok(x)
 }
 
 /// Solves a trigiagonal system of linear equations with heap allocation
@@ -101,40 +67,11 @@ pub fn solve_givens<T: Float>(sup: &[T], diag: &[T], sub: &[T], rhs: &[T]) -> Re
     let mut d = diag.to_vec();
     let mut u = if n > 1 {vec![T::zero(); n-2]} else {vec![]};
     let mut rhs = rhs.to_vec();
+    let mut x = vec![T::zero(); n];
 
-    for i in 0..(n - 1) {
-        let bi = sub[i];
-        let di = d[i];
+    solve_givens_body(sub, &mut d, &mut a, &mut u, &mut rhs, &mut x)?;
 
-        if is_zero_eps_mag(bi, di) {
-            continue;
-        } else if is_zero_eps_mag(di, bi) {
-            d[i] = sub[i];
-            swap(&mut d[i + 1], &mut a[i]);
-            rhs.swap(i, i + 1);
-            if i < u.len() {
-                u[i] = a[i + 1];
-                a[i + 1] = T::zero();
-            }
-            continue;
-        }
-
-        let ai = a[i];
-        let di1 = d[i + 1];
-        let rhsi = rhs[i];
-        let rhsi1 = rhs[i + 1];
-
-        let c;
-        let s;
-
-        (d[i], a[i], d[i + 1], s, c) = rotate_primary(ai, di, bi, di1)?;
-        (rhs[i], rhs[i + 1]) = rotate_rhs(rhsi, rhsi1, s, c);
-
-        if i < u.len() {
-            (u[i], a[i + 1]) = rotate_secondary(a[i + 1], s, c);
-        }
-    }
-    compute_x(&rhs, &d, &a, &u)
+    Ok(x)
 }
 
 /// Precomputes a system for multiple differenr RHS with heap allocation
@@ -169,31 +106,7 @@ pub fn precompute_givens<T: Float>(sup: &[T], diag: &[T], sub: &[T]) -> Result<T
 
     let mut sins_cosins = vec![(T::zero(), T::zero()); n-1];
 
-    for i in 0..(n - 1) {
-        let bi = sub[i];
-        let di = d[i];
-
-        if is_zero_eps_mag(bi, di) {
-            sins_cosins[i] = (T::zero(), T::one().copysign(di));
-            continue;
-        } else if is_zero_eps_mag(di, bi) {
-            sins_cosins[i] = (-T::one().copysign(bi), T::zero());
-            continue;
-        }
-
-        let ai = a[i];
-        let di1 = d[i + 1];
-
-        let c;
-        let s;
-
-        (d[i], a[i], d[i + 1], s, c) = rotate_primary(ai, di, bi, di1)?;
-        sins_cosins[i] = (s, c);
-        
-        if i < u.len() {
-            (u[i], a[i + 1]) = rotate_secondary(a[i + 1], s, c);
-        }
-    }
+    precompute_givens_body(sub, &mut d, &mut a, &mut u, &mut sins_cosins)?;
     Ok(TridiagonalSystemPrecomputed {
         diag: d,
         sup1: if a.len() > 0 {Some(a)} else {None},
@@ -230,23 +143,20 @@ impl<T: Float> TridiagonalSystemPrecomputed<T> {
             return Err(SolverErrors::InvalidRhsSizing);
         }
 
-        if let Some(sins_cosins) = &self.sins_cosins{
-            for (i, &(s, c)) in sins_cosins.iter().enumerate() {
-                if s.abs() < T::epsilon() {
-                    continue;
-                } else if c.abs() < T::epsilon() {
-                    rhsl.swap(i, i + 1);
-                    continue;
-                }
-                (rhsl[i], rhsl[i + 1]) = rotate_rhs(rhsl[i], rhsl[i + 1], s, c);
-            }
+        let mut x = vec![T::zero(); self.diag.len()];
+
+        if let Some(sins_cosins) = &self.sins_cosins {
+            solve_givens_sc_rhs_body(sins_cosins, &mut rhsl);
         }
+        
         compute_x(
+            &mut x,
             &rhsl,
             &self.diag,
             &self.sup1.clone().unwrap_or(vec![]),
             &self.sup2.clone().unwrap_or(vec![])
-        )
+        )?;
+        Ok(x)
     }
 }
 

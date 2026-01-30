@@ -3,12 +3,6 @@ use crate::solver_parts::*;
 
 use num_traits::Float;
 
-#[cfg(feature = "std")]
-use std::mem::swap;
-
-#[cfg(not(feature = "std"))]
-use core::mem::swap;
-
 /// A struct for holding tridiagonal system precomputed for working with multiple righ hand sides without heap allocation
 /// 
 /// # Example
@@ -86,39 +80,11 @@ pub fn solve_givens<T: Float, const D: usize, const S: usize>(sup: &[T; S], diag
     let mut ur = [T::zero(); S];
     let u = if S > 1 {&mut ur[..S-1]} else {&mut []};
 
-    for i in 0..(D - 1) {
-        let bi = sub[i];
-        let di = d[i];
+    let mut x = [T::zero(); D];
 
-        if is_zero_eps_mag(bi, di) {
-            continue;
-        } else if is_zero_eps_mag(di, bi) {
-            d[i] = sub[i];
-            swap(&mut d[i + 1], &mut a[i]);
-            rhs.swap(i, i + 1);
-            if i < u.len() {
-                u[i] = a[i + 1];
-                a[i + 1] = T::zero();
-            }
-            continue;
-        }
+    solve_givens_body(sub, &mut d, &mut a, u, &mut rhs, &mut x)?;
 
-        let ai = a[i];
-        let di1 = d[i + 1];
-        let rhsi = rhs[i];
-        let rhsi1 = rhs[i + 1];
-
-        let c;
-        let s;
-
-        (d[i], a[i], d[i + 1], s, c) = rotate_primary(ai, di, bi, di1)?;
-        (rhs[i], rhs[i + 1]) = rotate_rhs(rhsi, rhsi1, s, c);
-
-        if i < u.len() {
-            (u[i], a[i + 1]) = rotate_secondary(a[i + 1], s, c);
-        }
-    }
-    compute_x(&rhs, &d, &a, &u)
+    Ok(x)
 }
 
 /// Precomputes a system for multiple differenr RHS without heap allocation
@@ -153,31 +119,8 @@ pub fn precompute_givens<T: Float, const D: usize, const S: usize>(sup: &[T; S],
 
     let mut sins_cosins = [(T::zero(), T::zero()); S];
 
-    for i in 0..(D - 1) {
-        let bi = sub[i];
-        let di = d[i];
+    precompute_givens_body(sub, &mut d, &mut a, u, &mut sins_cosins)?;
 
-        if is_zero_eps_mag(bi, di) {
-            sins_cosins[i] = (T::zero(), T::one().copysign(di));
-            continue;
-        } else if is_zero_eps_mag(di, bi) {
-            sins_cosins[i] = (-T::one().copysign(bi), T::zero());
-            continue;
-        }
-
-        let ai = a[i];
-        let di1 = d[i + 1];
-
-        let c;
-        let s;
-
-        (d[i], a[i], d[i + 1], s, c) = rotate_primary(ai, di, bi, di1)?;
-        sins_cosins[i] = (s, c);
-        
-        if i < u.len() {
-            (u[i], a[i + 1]) = rotate_secondary(a[i + 1], s, c);
-        }
-    }
     Ok(TridiagonalSystemPrecomputed {
         diag: d,
         sup1: if a.len() > 0 {Some(a)} else {None},
@@ -211,15 +154,7 @@ impl<T: Float, const D: usize, const S: usize> TridiagonalSystemPrecomputed<T, D
         let mut rhsl = rhs.clone();
 
         if let Some(sins_cosins) = &self.sins_cosins{
-            for (i, &(s, c)) in sins_cosins.iter().enumerate() {
-                if s.abs() < T::epsilon() {
-                    continue;
-                } else if c.abs() < T::epsilon() {
-                    rhsl.swap(i, i + 1);
-                    continue;
-                }
-                (rhsl[i], rhsl[i + 1]) = rotate_rhs(rhsl[i], rhsl[i + 1], s, c);
-            }
+            solve_givens_sc_rhs_body(sins_cosins, &mut rhsl);
         }
 
         compute_x(
