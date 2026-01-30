@@ -250,4 +250,17 @@ impl<T: Float> TridiagonalSystemPrecomputed<T> {
     }
 }
 
-//pub fn refine_solution_
+pub fn refine_tridiag_solution_iter_kaczmarz<T: Float>(sub: &[T], diag: &[T], sup: &[T], rhs: &[T], x_init: &[T], iter: usize, eps: T) -> Result<Vec<T>, SolverErrors>{
+    let mut x = x_init.to_vec();
+    let n = x.len();
+    let ai_ai_dotproducts = if n > 1 {
+        let mut prod = vec![diag[0].powi(2) + sup[0].powi(2)];
+        prod.extend((1..n-1).map(|i| diag[i].powi(2) + sup[i].powi(2) + sub[i - 1].powi(2)));
+        prod.push(sub[n-2].powi(2) + diag[n-1].powi(2));
+        prod
+    } else {
+        vec![diag[0].powi(2)]
+    };
+    kaczmarz_body(sub, diag, sup, rhs, &ai_ai_dotproducts, &mut x, n, iter, eps)?;
+    Ok(x)
+}

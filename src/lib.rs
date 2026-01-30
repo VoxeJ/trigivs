@@ -20,10 +20,20 @@ pub mod prelude {
     pub use crate::compute_solution_norm;
 
     #[cfg(feature = "alloc")]
-    pub use crate::alloc::{TridiagonalSystemPrecomputed, precompute_givens, solve_givens};
+    pub use crate::alloc::{
+        TridiagonalSystemPrecomputed, 
+        precompute_givens, 
+        solve_givens, 
+        refine_tridiag_solution_iter_kaczmarz
+    };
 
     #[cfg(not(feature = "alloc"))]
-    pub use crate::no_alloc::{TridiagonalSystemPrecomputed, precompute_givens, solve_givens};
+    pub use crate::no_alloc::{
+        TridiagonalSystemPrecomputed, 
+        precompute_givens, 
+        solve_givens,
+        refine_tridiag_solution_iter_kaczmarz
+    };
 }
 
 use num_traits::Float;
@@ -94,7 +104,7 @@ pub fn compute_tridiag_determinant<T: Float>(sup: &[T], diag: &[T], sub: &[T]) -
 /// ```
 /// 
 pub fn compute_solution_norm<T: Float>(sup: &[T], diag: &[T], sub: &[T], rhs: &[T], x: &[T]) -> Result<T, solver_error::SolverErrors>{
-    if sup.len() != sub.len() || sup.len() + 1 != diag.len(){
+    if sup.len() != sub.len() || sup.len() + 1 != diag.len() || x.len() != diag.len(){
         return Err(solver_error::SolverErrors::InvalidDiagonals);
     } else if diag.len() != rhs.len() {
         return Err(solver_error::SolverErrors::InvalidRhsSizing);

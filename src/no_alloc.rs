@@ -230,3 +230,23 @@ impl<T: Float, const D: usize, const S: usize> TridiagonalSystemPrecomputed<T, D
         )
     }
 }
+
+pub fn refine_tridiag_solution_iter_kaczmarz<T: Float, const D: usize, const S: usize>(sub: &[T; S], diag: &[T; D], sup: &[T; S], rhs: &[T; D], x_init: &[T; D], iter: usize, eps: T) -> Result<[T; D], SolverErrors>{
+    
+    const { assert!(D == S + 1, "Sub and sup diagonals must be exctly 1 element smaller than main diagonal") };
+
+    let mut x = x_init.clone();
+    let mut ai_ai_dotproducts = [T::zero(); D];
+    if D == 1 {
+        ai_ai_dotproducts[0] = diag[0].powi(2);
+    } else {
+        ai_ai_dotproducts[0] = diag[0].powi(2) + sup[0].powi(2);
+        ai_ai_dotproducts
+            .iter_mut().enumerate()
+            .skip(1).take(D - 2)
+            .for_each(|(i, elem)| *elem = diag[i].powi(2) + sup[i].powi(2) + sub[i - 1].powi(2));
+        ai_ai_dotproducts[D-1] = sub[D - 2].powi(2) + diag[D - 1].powi(2)
+    }
+    kaczmarz_body(sub, diag, sup, rhs, &ai_ai_dotproducts, &mut x, D, iter, eps)?;
+    Ok(x)
+}
