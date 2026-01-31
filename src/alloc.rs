@@ -206,3 +206,43 @@ pub fn refine_tridiag_solution_iter_kaczmarz<T: Float>(sub: &[T], diag: &[T], su
     kaczmarz_body(sub, diag, sup, rhs, &ai_ai_dotproducts, &mut x, n, iter, eps)?;
     Ok(x)
 }
+
+pub fn solve_givens_ruiz_precond<T: Float>(sup: &[T], diag: &[T], sub: &[T], rhs: &[T], r_iter: usize, r_eps: T) -> Result<Vec<T>, SolverErrors> {
+    if sup.len() != sub.len() || sup.len() + 1 != diag.len() {
+        return Err(SolverErrors::InvalidDiagonals);
+    } else if diag.len() != rhs.len() {
+        return Err(SolverErrors::InvalidRhsSizing);
+    }
+
+    let n = diag.len();
+
+    let mut sub_b = sub.to_vec();
+    let mut sup_b = sup.to_vec();
+    let mut diag_b = diag.to_vec();
+    let mut rhs = rhs.to_vec();
+
+    let mut col_b = vec![T::one(); n];
+
+    {
+        let mut row_b = vec![T::one(); n];
+        ruiz_equilibrium_body(
+            &mut diag_b, 
+            &mut sup_b, 
+            &mut sub_b, 
+            &mut row_b, 
+            &mut col_b, 
+            r_iter, 
+            r_eps
+        )?;
+        rhs.iter_mut().zip(row_b).for_each(|(rhs, row)| *rhs = *rhs * row);
+    }
+    
+    let mut u = if n > 1 {vec![T::zero(); n-2]} else {vec![]};
+    let mut x = vec![T::zero(); n];
+
+    solve_givens_body(&sub_b, &mut diag_b, &mut sup_b, &mut u, &mut rhs, &mut x)?;
+
+    x.iter_mut().zip(col_b).for_each(|(x, col)| *x = *x * col);
+
+    Ok(x)
+}
