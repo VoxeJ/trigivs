@@ -51,6 +51,19 @@ fn test_solver(){
 }
 
 #[test]
+fn test_ruiz_precond_solver(){
+    let sup = [4., 7., 7., 100.];
+    let diag = [1., 3., 6., 4., 12.];
+    let sub = [2., 5., 10., 90.];
+    let rhs = [-7., 17., -20., 514., -300.];
+    
+    let result = solve_givens_ruiz_precond(&sup, &diag, &sub, &rhs, 3, 0.1).unwrap();
+    let expected = [1., -2., 3., -4., 5.];
+
+    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon=1e-6);
+}
+
+#[test]
 fn test_zero_division(){
     let sup = [4., 7., 0., 100.];
     let diag = [1., 3., 0., 4., 12.];

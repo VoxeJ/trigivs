@@ -24,7 +24,8 @@ pub mod prelude {
         TridiagonalSystemPrecomputed, 
         precompute_givens, 
         solve_givens, 
-        refine_tridiag_solution_iter_kaczmarz
+        refine_tridiag_solution_iter_kaczmarz,
+        solve_givens_ruiz_precond
     };
 
     #[cfg(not(feature = "alloc"))]
