@@ -217,3 +217,40 @@ pub fn refine_tridiag_solution_iter_kaczmarz<T: Float, const D: usize, const S: 
     kaczmarz_body(sub, diag, sup, rhs, &ai_ai_dotproducts, &mut x, D, iter, eps)?;
     Ok(x)
 }
+
+pub fn solve_givens_ruiz_precond<T: Float, const D: usize, const S: usize>(sup: &[T; S], diag: &[T; D], sub: &[T; S], rhs: &[T; D], r_iter: usize, r_eps: T) -> Result<[T; D], SolverErrors> {
+    
+    const { assert!(D == S + 1, "Sub and sup diagonals must be exctly 1 element smaller than main diagonal") };
+
+    let mut sub_b = sub.clone();
+    let mut sup_b = sup.clone();
+    let mut diag_b = diag.clone();
+    let mut rhs = rhs.clone();
+
+    let mut col_b = [T::one(); D];
+
+    {
+        let mut row_b = [T::one(); D];
+        ruiz_equilibrium_body(
+            &mut diag_b, 
+            &mut sup_b, 
+            &mut sub_b, 
+            &mut row_b, 
+            &mut col_b, 
+            r_iter, 
+            r_eps
+        )?;
+        rhs.iter_mut().zip(row_b).for_each(|(rhs, row)| *rhs = *rhs * row);
+    }
+    
+    let mut ur = [T::zero(); S];
+    let u = if S > 1 {&mut ur[..S-1]} else {&mut []};
+
+    let mut x = [T::zero(); D];
+
+    solve_givens_body(&sub_b, &mut diag_b, &mut sup_b, u, &mut rhs, &mut x)?;
+
+    x.iter_mut().zip(col_b).for_each(|(x, col)| *x = *x * col);
+
+    Ok(x)
+}
