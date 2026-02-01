@@ -273,7 +273,7 @@ pub fn ruiz_equilibrium_body<T: Float>(
             return Err(SolverErrors::DivisionByZero);
         }
         row_buffer[0] = T::one() / d_buffer[0].abs();
-        d_buffer[0] = T::one().copysign(d_buffer[0]);
+        d_buffer[0] = T::one();
         return Ok(());
     }
     for _ in 0..iter{
@@ -331,4 +331,49 @@ pub fn ruiz_equilibrium_body<T: Float>(
         }
     }
     Ok(())
+}
+
+#[inline]
+fn condition_lower_bound<T: Float>(sub: &[T], diag: &[T], sup: &[T], det_sqrt: T) -> T{
+    let sum = 
+        sup.iter().zip(sub).map(|(el1, el2)| el1.powi(2)+ el2.powi(2)).reduce(|acc, el| acc + el).unwrap() + 
+        diag.iter().map(|el| el.powi(2)).reduce(|acc, el| acc + el).unwrap();
+    sum.sqrt()/det_sqrt
+}
+
+#[inline]
+fn smallest_largest_1norm<T: Float>(sub: &[T], diag: &[T], sup: &[T]) -> T {
+    let mut max_col_1norm = T::zero();
+    let mut max_row_1norm = T::zero();
+    let mut min_col_1norm = T::max_value();
+    let mut min_row_1norm = T::max_value();
+    let n = diag.len();
+    if n == 1{
+        return T::one();
+    }
+    for i in 0..diag.len(){
+        let mut col_1norm = diag[i].abs();
+        let mut row_1norm = col_1norm;
+        if i > 0 {
+            row_1norm = row_1norm + sub[i - 1].abs();
+            col_1norm = col_1norm + sup[i - 1].abs();
+        }
+        if i < n - 1 {
+            row_1norm = row_1norm + sup[i].abs();
+            col_1norm = col_1norm + sub[i].abs();
+        }
+        if row_1norm > max_row_1norm{
+            max_row_1norm = row_1norm;
+        }
+        if row_1norm < min_row_1norm{
+            min_row_1norm = row_1norm;
+        }
+        if col_1norm > max_col_1norm{
+            max_col_1norm = col_1norm;
+        }
+        if col_1norm < min_col_1norm{
+            min_col_1norm = col_1norm;
+        }
+    }
+    (max_row_1norm/min_row_1norm).max(max_col_1norm/min_col_1norm)
 }
