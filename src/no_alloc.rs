@@ -46,7 +46,8 @@ pub struct TridiagSysPrecomp<T: Float, const D: usize, const S: usize> {
 ///     &diag, 
 ///     &sub, 
 ///     5, 
-/// 0.001).unwrap();
+///     0.001
+/// ).unwrap();
 /// 
 /// let x1 = precomputed.solve_givens_rhs(&rhs1).unwrap();
 /// let x2 = precomputed.solve_givens_rhs(&rhs2).unwrap();
