@@ -8,6 +8,11 @@ use std::mem::swap;
 #[cfg(not(feature = "std"))]
 use core::mem::swap;
 
+#[cfg(feature = "std")]
+
+#[cfg(not(feature = "std"))]
+use rand::rngs::SmallRng;
+
 #[inline]
 pub fn rotate_primary<T: Float>(ai: T, di: T, bi: T, di1: T) -> Result<(T, T, T, T, T), SolverErrors> {
     let r = (di * di + bi * bi).sqrt();
@@ -207,8 +212,12 @@ pub fn kaczmarz_body<T: Float>(
     let fade = T::from(0.75).unwrap();
     let min_to_fade = T::from(1.2).unwrap();
     let mut overshoot_counter = T::one();
-    let mut prev_r = T::max_value();
-    let mut r = compute_solution_norm(sup, diag, sub, rhs, x_buffer)?;
+    let mut r = compute_solution_residual_norm(sup, diag, sub, rhs, x_buffer)?;
+    let mut w = T::one();
+    let mut prev_r;
+    if r < eps {
+        return Ok(())
+    }
     if n == 1 {
         if is_zero_eps_mag(diag[0], rhs[0]) {
             return Err(SolverErrors::DivisionByZero);
@@ -217,7 +226,6 @@ pub fn kaczmarz_body<T: Float>(
         return Ok(());
     }
     for _ in 0..iter {
-        let mut contin = false;
         for i in 0..n {
             let mut xi_ai_dotproduct = diag[i] * x_buffer[i];
             if i < n - 1{
@@ -226,7 +234,6 @@ pub fn kaczmarz_body<T: Float>(
             if i > 0 {
                 xi_ai_dotproduct = xi_ai_dotproduct + sub[i - 1] * x_buffer[i - 1];
             }
-            let w = T::one() / (overshoot_counter + if is_zero_eps_mag(prev_r, r) { T::one() } else { r / prev_r });
             let numerator = (rhs[i] - xi_ai_dotproduct) * w;
             if is_zero_eps_mag(ai_ai_prod[i], numerator) {
                 return Err(SolverErrors::DivisionByZero);
@@ -239,29 +246,27 @@ pub fn kaczmarz_body<T: Float>(
             if i > 0{
                 x_buffer[i - 1] = x_buffer[i - 1] + c * sub[i - 1];
             }
-            if overshoot_counter > min_to_fade {
+        }
+        prev_r = r;
+        r = compute_solution_residual_norm(sup, diag, sub, rhs, x_buffer)?;
+        w = if r < prev_r {T::one() / (overshoot_counter)} else {T::one() / (overshoot_counter + r/prev_r)};
+        if overshoot_counter > min_to_fade {
                 overshoot_counter = overshoot_counter * fade;
             }
-            if prev_r > r {
+            if prev_r < r {
                 overshoot_counter = overshoot_counter + T::one();
             }
-            prev_r = r;
-            r = compute_solution_norm(sup, diag, sub, rhs, x_buffer)?;
-            if r > eps {
-                contin = true;
-            }
-        }
-        if !contin {
+        if r < eps {
             break;
         }
     }
     Ok(())
 }
 
-pub fn ruiz_equilibrium_body<T: Float>(
-    d_buffer: &mut [T],
-    sup_buffer: &mut [T], 
-    sub_buffer: &mut [T],
+pub fn get_ruiz_equilibrium_mul<T: Float>(
+    d_buffer: &[T],
+    sup_buffer: &[T],
+    sub_buffer: &[T],
     row_buffer: &mut [T],
     col_buffer: &mut [T],
     iter: usize,
@@ -273,7 +278,7 @@ pub fn ruiz_equilibrium_body<T: Float>(
             return Err(SolverErrors::DivisionByZero);
         }
         row_buffer[0] = T::one() / d_buffer[0].abs();
-        d_buffer[0] = T::one();
+        //d_buffer[0] = T::one();
         return Ok(());
     }
     for _ in 0..iter{
@@ -295,6 +300,11 @@ pub fn ruiz_equilibrium_body<T: Float>(
             let r = T::one() / div;
 
             row_buffer[i] = row_buffer[i] * r;
+
+            let curr_norm_diff = (div - T::one()).abs();
+            if max_norm_diff < curr_norm_diff{
+                max_norm_diff = curr_norm_diff;
+            }
         }
         
         for i in 0..n {
@@ -317,9 +327,23 @@ pub fn ruiz_equilibrium_body<T: Float>(
                 max_norm_diff = curr_norm_diff;
             }
         }
-        if max_norm_diff < eps{
+        if max_norm_diff <= eps{
             break;
         }
+    }
+    Ok(())
+}
+
+pub fn apply_ruiz<T: Float>(
+    d_buffer: &mut [T],
+    sup_buffer: &mut [T],
+    sub_buffer: &mut [T],
+    row_buffer: &[T],
+    col_buffer: &[T],
+){
+    let n = d_buffer.len();
+    if n == 1{
+        d_buffer[0] = T::one();
     }
     for i in 0..n{
         d_buffer[i] = d_buffer[i] * row_buffer[i] * col_buffer[i];
@@ -330,50 +354,4 @@ pub fn ruiz_equilibrium_body<T: Float>(
             sub_buffer[i-1] = sub_buffer[i-1] * row_buffer[i] * col_buffer[i - 1]; 
         }
     }
-    Ok(())
-}
-
-#[inline]
-fn condition_lower_bound<T: Float>(sub: &[T], diag: &[T], sup: &[T], det_sqrt: T) -> T{
-    let sum = 
-        sup.iter().zip(sub).map(|(el1, el2)| el1.powi(2)+ el2.powi(2)).reduce(|acc, el| acc + el).unwrap() + 
-        diag.iter().map(|el| el.powi(2)).reduce(|acc, el| acc + el).unwrap();
-    sum.sqrt()/det_sqrt
-}
-
-#[inline]
-fn smallest_largest_1norm<T: Float>(sub: &[T], diag: &[T], sup: &[T]) -> T {
-    let mut max_col_1norm = T::zero();
-    let mut max_row_1norm = T::zero();
-    let mut min_col_1norm = T::max_value();
-    let mut min_row_1norm = T::max_value();
-    let n = diag.len();
-    if n == 1{
-        return T::one();
-    }
-    for i in 0..diag.len(){
-        let mut col_1norm = diag[i].abs();
-        let mut row_1norm = col_1norm;
-        if i > 0 {
-            row_1norm = row_1norm + sub[i - 1].abs();
-            col_1norm = col_1norm + sup[i - 1].abs();
-        }
-        if i < n - 1 {
-            row_1norm = row_1norm + sup[i].abs();
-            col_1norm = col_1norm + sub[i].abs();
-        }
-        if row_1norm > max_row_1norm{
-            max_row_1norm = row_1norm;
-        }
-        if row_1norm < min_row_1norm{
-            min_row_1norm = row_1norm;
-        }
-        if col_1norm > max_col_1norm{
-            max_col_1norm = col_1norm;
-        }
-        if col_1norm < min_col_1norm{
-            min_col_1norm = col_1norm;
-        }
-    }
-    (max_row_1norm/min_row_1norm).max(max_col_1norm/min_col_1norm)
 }

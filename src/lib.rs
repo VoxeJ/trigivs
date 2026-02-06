@@ -17,28 +17,34 @@ mod tests;
 pub mod prelude {
     pub use crate::solver_error::SolverErrors;
     pub use crate::compute_tridiag_determinant;
-    pub use crate::compute_solution_norm;
+    pub use crate::compute_solution_residual_norm;
 
     #[cfg(feature = "alloc")]
     pub use crate::alloc::{
-        TridiagonalSystemPrecomputed, 
+        TridiagSysPrecomp, 
         precompute_givens, 
+        precompute_givens_ruiz,
         solve_givens, 
-        refine_tridiag_solution_iter_kaczmarz,
-        solve_givens_ruiz_precond
+        tridiag_iter_kaczmarz,
+        solve_givens_ruiz_precond,
+        compute_ruiz_scaling
     };
 
     #[cfg(not(feature = "alloc"))]
     pub use crate::no_alloc::{
-        TridiagonalSystemPrecomputed, 
-        precompute_givens, 
+        TridiagSysPrecomp, 
+        precompute_givens,
+        precompute_givens_ruiz,
         solve_givens,
-        refine_tridiag_solution_iter_kaczmarz,
-        solve_givens_ruiz_precond
+        tridiag_iter_kaczmarz,
+        solve_givens_ruiz_precond,
+        compute_ruiz_scaling
     };
 }
 
 use num_traits::Float;
+
+use crate::prelude::SolverErrors;
 
 /// Provides possible errors
 /// 
@@ -60,7 +66,7 @@ pub mod no_alloc;
 /// # Argumens
 /// 
 /// * `sup` - superdiagonal slice
-/// * 'diag` - main diagonal slice
+/// * `diag` - main diagonal slice
 /// * `sub` - subdiagonal slice
 /// 
 /// # Example
@@ -71,7 +77,10 @@ pub mod no_alloc;
 /// let sub = [5.];
 /// let determinant = trigivs::prelude::compute_tridiag_determinant(&sup, &diag, &sub);
 /// ```
-pub fn compute_tridiag_determinant<T: Float>(sup: &[T], diag: &[T], sub: &[T]) -> T{
+pub fn compute_tridiag_determinant<T: Float>(sup: &[T], diag: &[T], sub: &[T]) -> Result<T, SolverErrors>{
+    if sup.len() != sub.len() || sup.len() + 1 != diag.len(){
+        return Err(SolverErrors::InvalidDiagonals)
+    }
     let mut dpp;
     let mut dp = T::one();
     let mut d = diag[0];
@@ -80,15 +89,15 @@ pub fn compute_tridiag_determinant<T: Float>(sup: &[T], diag: &[T], sub: &[T]) -
         dp = d;
         d = a * dp - b * c * dpp;
     }
-    d
+    Ok(d)
 }
 
-/// Computes solution inf norm
+/// Computes solution euclidean norm
 /// 
 /// # Argumens
 /// 
 /// * `sup` - superdiagonal slice
-/// * 'diag` - main diagonal slice
+/// * `diag` - main diagonal slice
 /// * `sub` - subdiagonal slice
 /// * `rhs` - right-hand part slice
 /// * `x` - solution slice
@@ -100,12 +109,18 @@ pub fn compute_tridiag_determinant<T: Float>(sup: &[T], diag: &[T], sub: &[T]) -
 /// let diag = [3., 2.];
 /// let sub = [5.];
 /// let rhs = [-3., 21.];
-/// let rhs_wrong = [-1., 21.];
+/// 
 /// let result = trigivs::prelude::solve_givens(&sup, &diag, &sub, &rhs).unwrap();
-/// let norm = trigivs::prelude::compute_solution_norm(&sup, &diag, &sub, &rhs_wrong, &result).unwrap();
+/// let norm = trigivs::prelude::compute_solution_residual_norm(
+///     &sup, 
+///     &diag, 
+///     &sub, 
+///     &rhs, 
+///     &result
+/// ).unwrap();
 /// ```
 /// 
-pub fn compute_solution_norm<T: Float>(sup: &[T], diag: &[T], sub: &[T], rhs: &[T], x: &[T]) -> Result<T, solver_error::SolverErrors>{
+pub fn compute_solution_residual_norm<T: Float>(sup: &[T], diag: &[T], sub: &[T], rhs: &[T], x: &[T]) -> Result<T, solver_error::SolverErrors>{
     if sup.len() != sub.len() || sup.len() + 1 != diag.len() || x.len() != diag.len(){
         return Err(solver_error::SolverErrors::InvalidDiagonals);
     } else if diag.len() != rhs.len() {
@@ -115,17 +130,11 @@ pub fn compute_solution_norm<T: Float>(sup: &[T], diag: &[T], sub: &[T], rhs: &[
     if diag.len() == 1{
         return Ok((rhs[0] - diag[0] * x[0]).abs())
     }
-    let mut nmax;
-    let mut max = (rhs[0] - diag[0] * x[0] - sup[0] * x[1]).abs();
+    let mut sum = 
+        (rhs[0] - diag[0] * x[0] - sup[0] * x[1]).powi(2) +
+        (rhs[n-1] - diag[n-1]*x[n-1] - sub[n-2] * x[n-2]).powi(2);
     for i in 1..n-1{
-        nmax = (rhs[i] - sub[i - 1] * x[i - 1] - diag[i] * x[i] - sup[i] * x[i + 1]).abs();
-        if nmax > max{
-            max = nmax;
-        }
+        sum = sum + (rhs[i] - sub[i - 1] * x[i - 1] - diag[i] * x[i] - sup[i] * x[i + 1]).powi(2);
     }
-    nmax = (rhs[n-1] - diag[n-1]*x[n-1] - sub[n-2] * x[n-2]).abs();
-    if nmax > max{
-        max = nmax;
-    }
-    Ok(max)
+    Ok(sum.sqrt())
 }

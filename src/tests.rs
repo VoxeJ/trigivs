@@ -7,7 +7,7 @@ fn test_determinant(){
     let diag = [1., 3., 6., 4., 12.];
     let sub = [2., 5., 10., 90.];
 
-    let result = compute_tridiag_determinant(&sup, &diag, &sub);
+    let result = compute_tridiag_determinant(&sup, &diag, &sub).unwrap();
     let expected = 586080.;
 
     assert_abs_diff_eq!(result, expected, epsilon=1e-6);
@@ -290,9 +290,9 @@ fn test_solution_norm(){
     let rhs_wrong = [-7., 17.1, -20., 514., -302.];
     
     let result = solve_givens(&sup, &diag, &sub, &rhs).unwrap();
-    let norm = compute_solution_norm(&sup, &diag, &sub, &rhs_wrong, &result).unwrap();
+    let norm = compute_solution_residual_norm(&sup, &diag, &sub, &rhs_wrong, &result).unwrap();
 
-    assert_abs_diff_eq!(norm, 2., epsilon=1e-6);
+    assert_abs_diff_eq!(norm, (0.1f64.powi(2)+2f64.powi(2)).sqrt(), epsilon=1e-6);
 }
 
 #[test]
@@ -303,7 +303,7 @@ fn test_1n_solution_norm(){
     let rhs_wrong = [12.];
     
     let result = solve_givens(&[], &diag, &[], &rhs).unwrap();
-    let norm = compute_solution_norm(&[], &diag, &[], &rhs_wrong, &result).unwrap();
+    let norm = compute_solution_residual_norm(&[], &diag, &[], &rhs_wrong, &result).unwrap();
 
     assert_abs_diff_eq!(norm, 2., epsilon=1e-6);
 }
@@ -318,9 +318,9 @@ fn test_2n_solution_norm(){
     let rhs_wrong = [-1., 28.];
     
     let result = solve_givens(&sup, &diag, &sub, &rhs).unwrap();
-    let norm = compute_solution_norm(&sup, &diag, &sub, &rhs_wrong, &result).unwrap();
+    let norm = compute_solution_residual_norm(&sup, &diag, &sub, &rhs_wrong, &result).unwrap();
 
-    assert_abs_diff_eq!(norm, 7., epsilon=1e-6);
+    assert_abs_diff_eq!(norm, (7f64.powi(2) + 2f64.powi(2)).sqrt(), epsilon=1e-6);
 }
 
 #[test]
@@ -330,7 +330,7 @@ fn test_iter_1n_sol(){
     let rhs = [100.];
 
     let x_init = [10_000.];
-    let x = refine_tridiag_solution_iter_kaczmarz(&[], &diag, &[], &rhs, &x_init, 1000, 0.001).unwrap();
+    let x = tridiag_iter_kaczmarz(&[], &diag, &[], &rhs, &x_init, 1000, 0.001).unwrap();
 
     assert_abs_diff_eq!(x[0], 50., epsilon=0.01);
 }
@@ -345,23 +345,38 @@ fn test_iter_2n_sol(){
     let expected = [3., 3.];
     let x_init = [-10_000.; 2];
 
-    let x = refine_tridiag_solution_iter_kaczmarz(&sub, &diag, &sup, &rhs, &x_init, 1000, 0.001).unwrap();
+    let x = tridiag_iter_kaczmarz(&sup, &diag, &sub, &rhs, &x_init, 1000, 0.001).unwrap();
 
     assert_abs_diff_eq!(x.as_ref() as &[f64], &expected.as_ref(), epsilon=0.01);
 }
 
 #[test]
 fn test_iter_n_sol(){
-    let diag = [0.001;10];
-    let sub = [-10000.;9];
-    let sup = sub.clone();
+    let sup = [4., 7., 7., 100.];
+    let diag = [1., 3., 6., 4., 12.];
+    let sub = [2., 5., 10., 90.];
 
-    let rhs = [-10.; 10];
+    let rhs = [-8., 19., -36.5, 530., -360.];
 
-    let x_init = [-10.; 10];
-    let x = refine_tridiag_solution_iter_kaczmarz(&sub, &diag, &sup, &rhs, &x_init, 1000, 0.001).unwrap();
+    let x_init = [1000.; 5];
+    let x = tridiag_iter_kaczmarz(&sup, &diag, &sub, &rhs, &x_init, 1000, 0.001).unwrap();
 
-    let norm = compute_solution_norm(&sup, &diag, &sub, &rhs, &x).unwrap();
+    let norm = compute_solution_residual_norm(&sup, &diag, &sub, &rhs, &x).unwrap();
 
-    assert_abs_diff_eq!(norm, 0., epsilon=0.01);
+    assert_abs_diff_eq!(norm, 0., epsilon=0.001);
+}
+
+#[test]
+fn test_ruiz_precomp(){
+    let sup = [4., 7., 7., 100.];
+    let diag = [1., 3., 6., 4., 12.];
+    let sub = [2., 5., 10., 90.];
+    let rhs = [-7., 17., -20., 514., -300.];
+    
+    let precomp = precompute_givens_ruiz(&sup, &diag, &sub, 5, 0.01).unwrap();
+
+    let result1 = solve_givens(&sup, &diag, &sub, &rhs).unwrap();
+    let result2 = precomp.solve_givens_rhs(&rhs).unwrap();
+
+    assert_abs_diff_eq!(result1.as_ref() as &[f64], result2.as_ref(), epsilon=1e-6);
 }
