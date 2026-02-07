@@ -9,7 +9,7 @@ repository = "https://github.com/VoxeJ/trigivs"
 license = "MIT"
 readme = "README.md"
 
-keywords = ["tridiagonal", "no_std", "linear", "equations", "solver", "ruiz", "preconditioning", "kaczmarz", "givens"]
+keywords = ["tridiagonal", "no_std", "linear", "equations", "solver"]
 categories = ["mathematics", "algorithms"]
 
 [features]
