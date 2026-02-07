@@ -1,8 +1,8 @@
-use approx::assert_abs_diff_eq;
 use crate::prelude::*;
+use approx::assert_abs_diff_eq;
 
 #[test]
-fn test_determinant(){
+fn test_determinant() {
     let sup = [4., 7., 7., 100.];
     let diag = [1., 3., 6., 4., 12.];
     let sub = [2., 5., 10., 90.];
@@ -10,78 +10,78 @@ fn test_determinant(){
     let result = compute_tridiag_determinant(&sup, &diag, &sub).unwrap();
     let expected = 586080.;
 
-    assert_abs_diff_eq!(result, expected, epsilon=1e-6);
+    assert_abs_diff_eq!(result, expected, epsilon = 1e-6);
 }
 
 #[test]
-fn test_1diag_solver(){
+fn test_1diag_solver() {
     let diag = [2.];
     let rhs = [10.];
-    
+
     let result = solve_givens(&[], &diag, &[], &rhs).unwrap();
     let expected = [5.];
 
-    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon=1e-6);
+    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon = 1e-6);
 }
 
 #[test]
-fn test_2diag_solver(){
+fn test_2diag_solver() {
     let sup = [-4.];
     let diag = [3., 2.];
     let sub = [5.];
     let rhs = [-3., 21.];
-    
+
     let result = solve_givens(&sup, &diag, &sub, &rhs).unwrap();
     let expected = [3., 3.];
 
-    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon=1e-6);
+    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon = 1e-6);
 }
 
 #[test]
-fn test_solver(){
+fn test_solver() {
     let sup = [4., 7., 7., 100.];
     let diag = [1., 3., 6., 4., 12.];
     let sub = [2., 5., 10., 90.];
     let rhs = [-7., 17., -20., 514., -300.];
-    
+
     let result = solve_givens(&sup, &diag, &sub, &rhs).unwrap();
     let expected = [1., -2., 3., -4., 5.];
 
-    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon=1e-6);
+    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon = 1e-6);
 }
 
 #[test]
-fn test_ruiz_precond_solver(){
+fn test_ruiz_precond_solver() {
     let sup = [4., 7., 7., 100.];
     let diag = [1., 3., 6., 4., 12.];
     let sub = [2., 5., 10., 90.];
     let rhs = [-7., 17., -20., 514., -300.];
-    
+
     let result = solve_givens_ruiz_precond(&sup, &diag, &sub, &rhs, 3, 0.1).unwrap();
     let expected = [1., -2., 3., -4., 5.];
 
-    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon=1e-6);
+    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon = 1e-6);
 }
 
 #[test]
-fn test_zero_division(){
+fn test_zero_division() {
     let sup = [4., 7., 0., 100.];
     let diag = [1., 3., 0., 4., 12.];
     let sub = [2., 0., 10., 90.];
     let rhs = [-7., 17., -20., 514., -300.];
-    
+
     let result = solve_givens(&sup, &diag, &sub, &rhs);
-    
+
     assert!(matches!(result, Err(SolverErrors::DivisionByZero)));
 }
 
 #[test]
-fn test_1diag_precomp(){
+fn test_1diag_precomp() {
     let diag = [2.];
 
     let rhs1 = [10.];
     let rhs2 = [-8.];
-    
+
     let precomp = precompute_givens(&[], &diag, &[]).unwrap();
 
     let result1 = precomp.solve_givens_rhs(&rhs1).unwrap();
@@ -90,19 +90,27 @@ fn test_1diag_precomp(){
     let expected1 = [5.];
     let expected2 = [-4.];
 
-    assert_abs_diff_eq!(result1.as_ref() as &[f64], expected1.as_ref(), epsilon=1e-6);
-    assert_abs_diff_eq!(result2.as_ref() as &[f64], expected2.as_ref(), epsilon=1e-6);
+    assert_abs_diff_eq!(
+        result1.as_ref() as &[f64],
+        expected1.as_ref(),
+        epsilon = 1e-6
+    );
+    assert_abs_diff_eq!(
+        result2.as_ref() as &[f64],
+        expected2.as_ref(),
+        epsilon = 1e-6
+    );
 }
 
 #[test]
-fn test_2diag_precomp(){
+fn test_2diag_precomp() {
     let sup = [-4.];
     let diag = [3., 2.];
     let sub = [5.];
 
     let rhs1 = [-3., 21.];
-    let rhs2  = [-23., 5.];
-    
+    let rhs2 = [-23., 5.];
+
     let precomp = precompute_givens(&sup, &diag, &sub).unwrap();
 
     let result1 = precomp.solve_givens_rhs(&rhs1).unwrap();
@@ -111,80 +119,96 @@ fn test_2diag_precomp(){
     let expected1 = [3., 3.];
     let expected2 = [-1., 5.];
 
-    assert_abs_diff_eq!(result1.as_ref() as &[f64], expected1.as_ref(), epsilon=1e-6);
-    assert_abs_diff_eq!(result2.as_ref() as &[f64], expected2.as_ref(), epsilon=1e-6);
+    assert_abs_diff_eq!(
+        result1.as_ref() as &[f64],
+        expected1.as_ref(),
+        epsilon = 1e-6
+    );
+    assert_abs_diff_eq!(
+        result2.as_ref() as &[f64],
+        expected2.as_ref(),
+        epsilon = 1e-6
+    );
 }
 
 #[test]
-fn test_precomp(){
+fn test_precomp() {
     let sup = [4., 7., 7., 100.];
     let diag = [1., 3., 6., 4., 12.];
     let sub = [2., 5., 10., 90.];
-    
+
     let rhs1 = [-7., 17., -20., 514., -300.];
     let rhs2 = [43., 57., -72., 450., -1740.];
-    
+
     let precomp = precompute_givens(&sup, &diag, &sub).unwrap();
-    
+
     let result1 = precomp.solve_givens_rhs(&rhs1).unwrap();
     let result2 = precomp.solve_givens_rhs(&rhs2).unwrap();
 
     let expected1 = [1., -2., 3., -4., 5.];
     let expected2 = [3., 10., 3., -20., 5.];
 
-    assert_abs_diff_eq!(result1.as_ref() as &[f64], expected1.as_ref(), epsilon=1e-6);
-    assert_abs_diff_eq!(result2.as_ref() as &[f64], expected2.as_ref(), epsilon=1e-6);
+    assert_abs_diff_eq!(
+        result1.as_ref() as &[f64],
+        expected1.as_ref(),
+        epsilon = 1e-6
+    );
+    assert_abs_diff_eq!(
+        result2.as_ref() as &[f64],
+        expected2.as_ref(),
+        epsilon = 1e-6
+    );
 }
 
 #[test]
-fn test_precom_direct_eq_solver(){
+fn test_precom_direct_eq_solver() {
     let sup = [4., 7., 7., 100.];
     let diag = [1., 3., 6., 4., 12.];
     let sub = [2., 5., 10., 90.];
     let rhs = [-7., 17., -20., 514., -300.];
-    
+
     let precomp = precompute_givens(&sup, &diag, &sub).unwrap();
 
     let result1 = solve_givens(&sup, &diag, &sub, &rhs).unwrap();
     let result2 = precomp.solve_givens_rhs(&rhs).unwrap();
 
-    assert_abs_diff_eq!(result1.as_ref() as &[f64], result2.as_ref(), epsilon=1e-6);
+    assert_abs_diff_eq!(result1.as_ref() as &[f64], result2.as_ref(), epsilon = 1e-6);
 }
 
 #[test]
-fn test_zero_sub_solver(){
+fn test_zero_sub_solver() {
     let sup = [4., 7., 7., 100.];
     let diag = [1., 3., 6., 4., 12.];
     let sub = [0., 0., 0., 0.];
-    
+
     let rhs = [-7., 15., -10., 484., 60.];
 
     let result = solve_givens(&sup, &diag, &sub, &rhs).unwrap();
     let expected = [1., -2., 3., -4., 5.];
 
-    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon=1e-6);
+    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon = 1e-6);
 }
 
 #[test]
-fn test_almost_zero_diag_solver(){
+fn test_almost_zero_diag_solver() {
     let sup = [4., 7., 7., 100.];
     let diag = [0., 0., 0.5, 0., 0.];
     let sub = [2., 5., 10., 90.];
-    
+
     let rhs = [-8., 23., -36.5, 530., -360.];
 
     let result = solve_givens(&sup, &diag, &sub, &rhs).unwrap();
     let expected = [1., -2., 3., -4., 5.];
 
-    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon=1e-6);
+    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon = 1e-6);
 }
 
 #[test]
-fn test_zero_sub_precomp(){
+fn test_zero_sub_precomp() {
     let sup = [4., 7., 7., 100.];
     let diag = [1., 3., 6., 4., 12.];
     let sub = [0., 0., 0., 0.];
-    
+
     let rhs = [-7., 15., -10., 484., 60.];
 
     let precomp = precompute_givens(&sup, &diag, &sub).unwrap();
@@ -192,15 +216,15 @@ fn test_zero_sub_precomp(){
     let result = precomp.solve_givens_rhs(&rhs).unwrap();
     let expected = [1., -2., 3., -4., 5.];
 
-    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon=1e-6);
+    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon = 1e-6);
 }
 
 #[test]
-fn test_almost_zero_diag_precomp(){
+fn test_almost_zero_diag_precomp() {
     let sup = [4., 7., 7., 100.];
     let diag = [0., 0., 0.5, 0., 0.];
     let sub = [2., 5., 10., 90.];
-    
+
     let rhs = [-8., 23., -36.5, 530., -360.];
 
     let precomp = precompute_givens(&sup, &diag, &sub).unwrap();
@@ -208,28 +232,28 @@ fn test_almost_zero_diag_precomp(){
     let result = precomp.solve_givens_rhs(&rhs).unwrap();
     let expected = [1., -2., 3., -4., 5.];
 
-    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon=1e-6);
+    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon = 1e-6);
 }
 
 #[test]
-fn test_almost_zero_diag_neg_precomp(){
+fn test_almost_zero_diag_neg_precomp() {
     let sup = [4., 7., 7., 100.];
     let diag = [0., 0., 0.5, 0., 0.];
     let sub = [-2., 5., 10., 90.];
-    
+
     let rhs = [-8., 19., -36.5, 530., -360.];
 
     let precomp = precompute_givens(&sup, &diag, &sub).unwrap();
 
     let result = precomp.solve_givens_rhs(&rhs).unwrap();
     let expected = [1., -2., 3., -4., 5.];
-    
-    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon=1e-6);
+
+    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon = 1e-6);
 }
 
 #[cfg(feature = "alloc")]
 #[test]
-fn test_invalid_diag(){
+fn test_invalid_diag() {
     let sup = [4., 7., 7., 100.];
     let diag = [1., 3., 6., 4., 12.];
     let sub = [2., 5., 10.];
@@ -242,12 +266,12 @@ fn test_invalid_diag(){
 
 #[cfg(feature = "alloc")]
 #[test]
-fn test_invalid_rhs(){
+fn test_invalid_rhs() {
     let sup = [4., 7., 7., 100.];
     let diag = [1., 3., 6., 4., 12.];
     let sub = [2., 5., 10., 90.];
     let rhs = [-7., 17., -20., 514.];
-    
+
     let result = solve_givens(&sup, &diag, &sub, &rhs);
 
     assert!(matches!(result, Err(SolverErrors::InvalidRhsSizing)));
@@ -255,7 +279,7 @@ fn test_invalid_rhs(){
 
 #[cfg(feature = "alloc")]
 #[test]
-fn test_invalid_diag_precomp(){
+fn test_invalid_diag_precomp() {
     let sup = [4., 7., 7., 100.];
     let diag = [1., 3., 6., 4., 12.];
     let sub = [2., 5., 10.];
@@ -267,13 +291,13 @@ fn test_invalid_diag_precomp(){
 
 #[cfg(feature = "alloc")]
 #[test]
-fn test_invalid_rhs_precomp(){
+fn test_invalid_rhs_precomp() {
     let sup = [4., 7., 7., 100.];
     let diag = [1., 3., 6., 4., 12.];
     let sub = [2., 5., 10., 90.];
-    
+
     let rhs = [-7., 17., -20., 514.];
-    
+
     let precomp = precompute_givens(&sup, &diag, &sub).unwrap();
     let result = precomp.solve_givens_rhs(&rhs);
 
@@ -281,50 +305,50 @@ fn test_invalid_rhs_precomp(){
 }
 
 #[test]
-fn test_solution_norm(){
+fn test_solution_norm() {
     let sup = [4., 7., 7., 100.];
     let diag = [1., 3., 6., 4., 12.];
     let sub = [2., 5., 10., 90.];
-    
+
     let rhs = [-7., 17., -20., 514., -300.];
     let rhs_wrong = [-7., 17.1, -20., 514., -302.];
-    
+
     let result = solve_givens(&sup, &diag, &sub, &rhs).unwrap();
     let norm = compute_solution_residual_norm(&sup, &diag, &sub, &rhs_wrong, &result).unwrap();
 
-    assert_abs_diff_eq!(norm, (0.1f64.powi(2)+2f64.powi(2)).sqrt(), epsilon=1e-6);
+    assert_abs_diff_eq!(norm, (0.1f64.powi(2) + 2f64.powi(2)).sqrt(), epsilon = 1e-6);
 }
 
 #[test]
-fn test_1n_solution_norm(){
+fn test_1n_solution_norm() {
     let diag = [2.];
 
     let rhs = [10.];
     let rhs_wrong = [12.];
-    
+
     let result = solve_givens(&[], &diag, &[], &rhs).unwrap();
     let norm = compute_solution_residual_norm(&[], &diag, &[], &rhs_wrong, &result).unwrap();
 
-    assert_abs_diff_eq!(norm, 2., epsilon=1e-6);
+    assert_abs_diff_eq!(norm, 2., epsilon = 1e-6);
 }
 
 #[test]
-fn test_2n_solution_norm(){
+fn test_2n_solution_norm() {
     let sup = [-4.];
     let diag = [3., 2.];
     let sub = [5.];
     let rhs = [-3., 21.];
 
     let rhs_wrong = [-1., 28.];
-    
+
     let result = solve_givens(&sup, &diag, &sub, &rhs).unwrap();
     let norm = compute_solution_residual_norm(&sup, &diag, &sub, &rhs_wrong, &result).unwrap();
 
-    assert_abs_diff_eq!(norm, (7f64.powi(2) + 2f64.powi(2)).sqrt(), epsilon=1e-6);
+    assert_abs_diff_eq!(norm, (7f64.powi(2) + 2f64.powi(2)).sqrt(), epsilon = 1e-6);
 }
 
 #[test]
-fn test_iter_1n_sol(){
+fn test_iter_1n_sol() {
     let diag = [2.];
 
     let rhs = [100.];
@@ -332,11 +356,11 @@ fn test_iter_1n_sol(){
     let x_init = [10_000.];
     let x = tridiag_iter_kaczmarz(&[], &diag, &[], &rhs, &x_init, 1000, 0.001).unwrap();
 
-    assert_abs_diff_eq!(x[0], 50., epsilon=0.01);
+    assert_abs_diff_eq!(x[0], 50., epsilon = 0.01);
 }
 
 #[test]
-fn test_iter_2n_sol(){
+fn test_iter_2n_sol() {
     let sup = [-4.];
     let diag = [3., 2.];
     let sub = [5.];
@@ -347,11 +371,11 @@ fn test_iter_2n_sol(){
 
     let x = tridiag_iter_kaczmarz(&sup, &diag, &sub, &rhs, &x_init, 1000, 0.001).unwrap();
 
-    assert_abs_diff_eq!(x.as_ref() as &[f64], &expected.as_ref(), epsilon=0.01);
+    assert_abs_diff_eq!(x.as_ref() as &[f64], &expected.as_ref(), epsilon = 0.01);
 }
 
 #[test]
-fn test_iter_n_sol(){
+fn test_iter_n_sol() {
     let sup = [4., 7., 7., 100.];
     let diag = [1., 3., 6., 4., 12.];
     let sub = [2., 5., 10., 90.];
@@ -363,20 +387,20 @@ fn test_iter_n_sol(){
 
     let norm = compute_solution_residual_norm(&sup, &diag, &sub, &rhs, &x).unwrap();
 
-    assert_abs_diff_eq!(norm, 0., epsilon=0.001);
+    assert_abs_diff_eq!(norm, 0., epsilon = 0.001);
 }
 
 #[test]
-fn test_ruiz_precomp(){
+fn test_ruiz_precomp() {
     let sup = [4., 7., 7., 100.];
     let diag = [1., 3., 6., 4., 12.];
     let sub = [2., 5., 10., 90.];
     let rhs = [-7., 17., -20., 514., -300.];
-    
+
     let precomp = precompute_givens_ruiz(&sup, &diag, &sub, 5, 0.01).unwrap();
 
     let result1 = solve_givens(&sup, &diag, &sub, &rhs).unwrap();
     let result2 = precomp.solve_givens_rhs(&rhs).unwrap();
 
-    assert_abs_diff_eq!(result1.as_ref() as &[f64], result2.as_ref(), epsilon=1e-6);
+    assert_abs_diff_eq!(result1.as_ref() as &[f64], result2.as_ref(), epsilon = 1e-6);
 }

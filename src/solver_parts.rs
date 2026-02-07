@@ -1,6 +1,6 @@
+use crate::prelude::*;
 use crate::solver_error::SolverErrors;
 use num_traits::float::Float;
-use crate::prelude::*;
 
 #[cfg(feature = "std")]
 use std::mem::swap;
@@ -9,12 +9,16 @@ use std::mem::swap;
 use core::mem::swap;
 
 #[cfg(feature = "std")]
-
 #[cfg(not(feature = "std"))]
 use rand::rngs::SmallRng;
 
 #[inline]
-pub fn rotate_primary<T: Float>(ai: T, di: T, bi: T, di1: T) -> Result<(T, T, T, T, T), SolverErrors> {
+pub fn rotate_primary<T: Float>(
+    ai: T,
+    di: T,
+    bi: T,
+    di1: T,
+) -> Result<(T, T, T, T, T), SolverErrors> {
     let r = (di * di + bi * bi).sqrt();
     if r < T::epsilon() {
         return Err(SolverErrors::DivisionByZero);
@@ -55,7 +59,13 @@ pub fn is_zero_eps_mag<T: Float>(val: T, mag: T) -> bool {
 }
 
 #[inline]
-pub fn compute_x<T: Float>(x_buffer: &mut [T], rhs: &[T], d: &[T], a: &[T], u: &[T]) -> Result<(), SolverErrors> {
+pub fn compute_x<T: Float>(
+    x_buffer: &mut [T],
+    rhs: &[T],
+    d: &[T],
+    a: &[T],
+    u: &[T],
+) -> Result<(), SolverErrors> {
     let n = x_buffer.len();
     for i in (0..n).rev() {
         let mut sum = T::zero();
@@ -76,13 +86,13 @@ pub fn compute_x<T: Float>(x_buffer: &mut [T], rhs: &[T], d: &[T], a: &[T], u: &
 }
 
 pub fn solve_givens_body<T: Float>(
-    sub: &[T], 
-    d_buffer: &mut [T], 
-    a_buffer: &mut [T], 
-    u_buffer: &mut [T], 
+    sub: &[T],
+    d_buffer: &mut [T],
+    a_buffer: &mut [T],
+    u_buffer: &mut [T],
     r_buffer: &mut [T],
-    x_buffer: &mut [T]
-) -> Result<(), SolverErrors>{
+    x_buffer: &mut [T],
+) -> Result<(), SolverErrors> {
     let n = d_buffer.len();
     for i in 0..(n - 1) {
         let bi = sub[i];
@@ -121,12 +131,12 @@ pub fn solve_givens_body<T: Float>(
 }
 
 pub fn precompute_givens_body<T: Float>(
-    sub: &[T], 
-    d_buffer: &mut [T], 
-    a_buffer: &mut [T], 
-    u_buffer: &mut [T], 
-    sc_buffer: &mut [(T, T)], 
-) -> Result<(), SolverErrors>{
+    sub: &[T],
+    d_buffer: &mut [T],
+    a_buffer: &mut [T],
+    u_buffer: &mut [T],
+    sc_buffer: &mut [(T, T)],
+) -> Result<(), SolverErrors> {
     let n = d_buffer.len();
     for i in 0..(n - 1) {
         let bi = sub[i];
@@ -155,7 +165,11 @@ pub fn precompute_givens_body<T: Float>(
                 d_buffer[i] = sub[i];
             }
             if i < u_buffer.len() {
-                u_buffer[i] = if bi.is_sign_negative() {-a_buffer[i + 1]} else {a_buffer[i + 1]};
+                u_buffer[i] = if bi.is_sign_negative() {
+                    -a_buffer[i + 1]
+                } else {
+                    a_buffer[i + 1]
+                };
                 a_buffer[i + 1] = T::zero();
             }
             continue;
@@ -169,7 +183,7 @@ pub fn precompute_givens_body<T: Float>(
 
         (d_buffer[i], a_buffer[i], d_buffer[i + 1], s, c) = rotate_primary(ai, di, bi, di1)?;
         sc_buffer[i] = (s, c);
-        
+
         if i < u_buffer.len() {
             (u_buffer[i], a_buffer[i + 1]) = rotate_secondary(a_buffer[i + 1], s, c);
         }
@@ -177,10 +191,10 @@ pub fn precompute_givens_body<T: Float>(
     Ok(())
 }
 
-pub fn solve_givens_sc_rhs_body<T: Float>(sins_cosins: &[(T, T)], r_buffer: &mut [T]){
+pub fn solve_givens_sc_rhs_body<T: Float>(sins_cosins: &[(T, T)], r_buffer: &mut [T]) {
     for (i, &(s, c)) in sins_cosins.iter().enumerate() {
         if s.abs() < T::epsilon() {
-            if c.is_sign_negative(){
+            if c.is_sign_negative() {
                 r_buffer[i] = -r_buffer[i];
                 r_buffer[i + 1] = -r_buffer[i + 1];
             }
@@ -216,7 +230,7 @@ pub fn kaczmarz_body<T: Float>(
     let mut w = T::one();
     let mut prev_r;
     if r < eps {
-        return Ok(())
+        return Ok(());
     }
     if n == 1 {
         if is_zero_eps_mag(diag[0], rhs[0]) {
@@ -228,7 +242,7 @@ pub fn kaczmarz_body<T: Float>(
     for _ in 0..iter {
         for i in 0..n {
             let mut xi_ai_dotproduct = diag[i] * x_buffer[i];
-            if i < n - 1{
+            if i < n - 1 {
                 xi_ai_dotproduct = xi_ai_dotproduct + sup[i] * x_buffer[i + 1];
             }
             if i > 0 {
@@ -241,21 +255,25 @@ pub fn kaczmarz_body<T: Float>(
             let c = numerator / ai_ai_prod[i];
             x_buffer[i] = x_buffer[i] + c * diag[i];
             if i < n - 1 {
-                x_buffer[i+1] = x_buffer[i+1] + c * sup[i];
+                x_buffer[i + 1] = x_buffer[i + 1] + c * sup[i];
             }
-            if i > 0{
+            if i > 0 {
                 x_buffer[i - 1] = x_buffer[i - 1] + c * sub[i - 1];
             }
         }
         prev_r = r;
         r = compute_solution_residual_norm(sup, diag, sub, rhs, x_buffer)?;
-        w = if r < prev_r {T::one() / (overshoot_counter)} else {T::one() / (overshoot_counter + r/prev_r)};
+        w = if r < prev_r {
+            T::one() / (overshoot_counter)
+        } else {
+            T::one() / (overshoot_counter + r / prev_r)
+        };
         if overshoot_counter > min_to_fade {
-                overshoot_counter = overshoot_counter * fade;
-            }
-            if prev_r < r {
-                overshoot_counter = overshoot_counter + T::one();
-            }
+            overshoot_counter = overshoot_counter * fade;
+        }
+        if prev_r < r {
+            overshoot_counter = overshoot_counter + T::one();
+        }
         if r < eps {
             break;
         }
@@ -270,8 +288,8 @@ pub fn get_ruiz_equilibrium_mul<T: Float>(
     row_buffer: &mut [T],
     col_buffer: &mut [T],
     iter: usize,
-    eps: T
-) -> Result<(), SolverErrors>{
+    eps: T,
+) -> Result<(), SolverErrors> {
     let n = d_buffer.len();
     if n == 1 {
         if d_buffer[0].abs() < T::epsilon() {
@@ -281,11 +299,11 @@ pub fn get_ruiz_equilibrium_mul<T: Float>(
         //d_buffer[0] = T::one();
         return Ok(());
     }
-    for _ in 0..iter{
+    for _ in 0..iter {
         let mut max_norm_diff = T::zero();
         for i in 0..n {
             let mut div = (d_buffer[i]).abs() * col_buffer[i];
-            if i < n - 1{
+            if i < n - 1 {
                 div = div.max(sup_buffer[i].abs() * col_buffer[i + 1]);
             }
             if i > 0 {
@@ -302,14 +320,14 @@ pub fn get_ruiz_equilibrium_mul<T: Float>(
             row_buffer[i] = row_buffer[i] * r;
 
             let curr_norm_diff = (div - T::one()).abs();
-            if max_norm_diff < curr_norm_diff{
+            if max_norm_diff < curr_norm_diff {
                 max_norm_diff = curr_norm_diff;
             }
         }
-        
+
         for i in 0..n {
             let mut div = d_buffer[i].abs() * row_buffer[i];
-            if i < n - 1{
+            if i < n - 1 {
                 div = div.max(sub_buffer[i].abs() * row_buffer[i + 1]);
             }
             if i > 0 {
@@ -323,11 +341,11 @@ pub fn get_ruiz_equilibrium_mul<T: Float>(
             col_buffer[i] = col_buffer[i] * c;
 
             let curr_norm_diff = (div - T::one()).abs();
-            if max_norm_diff < curr_norm_diff{
+            if max_norm_diff < curr_norm_diff {
                 max_norm_diff = curr_norm_diff;
             }
         }
-        if max_norm_diff <= eps{
+        if max_norm_diff <= eps {
             break;
         }
     }
@@ -340,18 +358,18 @@ pub fn apply_ruiz<T: Float>(
     sub_buffer: &mut [T],
     row_buffer: &[T],
     col_buffer: &[T],
-){
+) {
     let n = d_buffer.len();
-    if n == 1{
+    if n == 1 {
         d_buffer[0] = T::one();
     }
-    for i in 0..n{
+    for i in 0..n {
         d_buffer[i] = d_buffer[i] * row_buffer[i] * col_buffer[i];
         if i < n - 1 {
             sup_buffer[i] = sup_buffer[i] * row_buffer[i] * col_buffer[i + 1];
         }
         if i > 0 {
-            sub_buffer[i-1] = sub_buffer[i-1] * row_buffer[i] * col_buffer[i - 1]; 
+            sub_buffer[i - 1] = sub_buffer[i - 1] * row_buffer[i] * col_buffer[i - 1];
         }
     }
 }
