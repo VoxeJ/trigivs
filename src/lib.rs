@@ -22,13 +22,13 @@ pub mod prelude {
     #[cfg(feature = "alloc")]
     pub use crate::alloc::{
         compute_ruiz_scaling, precompute_givens, precompute_givens_ruiz, solve_givens,
-        solve_givens_ruiz_precond, tridiag_iter_kaczmarz, TridiagSysPrecomp,
+        solve_givens_ruiz_precond, tridiag_iter_kaczmarz, TridiagSysPrecomp, TridiagSysRuizPrecomp
     };
 
     #[cfg(not(feature = "alloc"))]
     pub use crate::no_alloc::{
         compute_ruiz_scaling, precompute_givens, precompute_givens_ruiz, solve_givens,
-        solve_givens_ruiz_precond, tridiag_iter_kaczmarz, TridiagSysPrecomp,
+        solve_givens_ruiz_precond, tridiag_iter_kaczmarz, TridiagSysPrecomp, TridiagSysRuizPrecomp
     };
 }
 
