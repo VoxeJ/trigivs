@@ -404,3 +404,61 @@ fn test_ruiz_precomp() {
 
     assert_abs_diff_eq!(result1.as_ref() as &[f64], result2.as_ref(), epsilon = 1e-6);
 }
+
+#[test]
+fn test_sparse() {
+    let sup = [4., 0., -7., 100.];
+    let diag = [-1., 0., -6., 0., 12.];
+    let sub = [2., 0., 0., -90.];
+    let rhs = [-9., 2., 10., 500., 420.];
+
+    let expected = [1., -2., 3., -4., 5.];
+
+    let result = solve_givens(&sup, &diag, &sub, &rhs).unwrap();
+
+    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon = 1e-6);
+}
+
+#[test]
+fn test_sparse_precomp() {
+    let sup = [4., 0., -7., 100.];
+    let diag = [-1., 0., -6., 0., 12.];
+    let sub = [2., 0., 0., -90.];
+    let rhs = [-9., 2., 10., 500., 420.];
+
+    let expected = [1., -2., 3., -4., 5.];
+
+    let precomp = precompute_givens(&sup, &diag, &sub).unwrap();
+    let result = precomp.solve_givens_rhs(&rhs).unwrap();
+
+    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon = 1e-6);
+}
+
+#[test]
+fn test_sparse_kaczmarz() {
+    let sup = [4., 0., -7., 100.];
+    let diag = [-1., 0., -6., 0., 12.];
+    let sub = [2., 0., 0., -90.];
+    let rhs = [-9., 2., 10., 500., 420.];
+
+    let expected = [1., -2., 3., -4., 5.];
+    let init = [0.;5];
+
+    let result = tridiag_iter_kaczmarz(&sup, &diag, &sub, &rhs, &init, 100, 1e-7).unwrap();
+
+    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon = 1e-6);
+}
+
+#[test]
+fn test_sparse_ruiz() {
+    let sup = [4., 0., -7., 100.];
+    let diag = [-1., 0., -6., 0., 12.];
+    let sub = [2., 0., 0., -90.];
+    let rhs = [-9., 2., 10., 500., 420.];
+
+    let expected = [1., -2., 3., -4., 5.];
+
+    let result = solve_givens_ruiz_precond(&sup, &diag, &sub, &rhs, 3, 0.01).unwrap();
+
+    assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon = 1e-6);
+}
