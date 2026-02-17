@@ -22,21 +22,21 @@ Add `trigivs` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-trigivs = "0.1"
+trigivs = "0.2"
 ```
 
 To use the library in `no_std` mode (no heap allocation):
 
 ```toml
 [dependencies]
-trigivs = { version = "0.1", default-features = false }
+trigivs = { version = "0.2", default-features = false }
 ```
 
 To use the library with heap allocation but without `std`:
 
 ```toml
 [dependencies]
-trigivs = { version = "0.1", default-features = false, features = ["alloc"] }
+trigivs = { version = "0.2", default-features = false, features = ["alloc"] }
 ```
 
 ---
@@ -59,6 +59,7 @@ fn main() {
     // 2. Solve directly
     let rhs = [1.0, 2.0, 3.0];
     let solution = solve_givens(&sup, &diag, &sub, &rhs).unwrap();
+    let solution_ruiz = solve_givens_ruiz_precond(&sup, &diag, &sub, &rhs, 3, 0.01);
     println!("Direct solution: {:?}", solution);
     
     // 3. Precompute for multiple RHS
@@ -69,7 +70,7 @@ fn main() {
     
     // 4. Refine solution iteratively
     // NOTE: Meant for large ill-defined systems or as rare fallback
-    let refined = refine_tridiag_solution_iter_kaczmarz(
+    let refined = tridiag_iter_kaczmarz(
         &sub, &diag, &sup, &rhs, &solution, 50, 1e-10
     ).unwrap();
     println!("Refined solution: {:?}", refined);
