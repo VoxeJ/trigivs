@@ -1,7 +1,9 @@
 use crate::prelude::*;
 use crate::solver_error::SolverErrors;
+use itertools::izip;
 use num_traits::float::Float;
 
+use std::iter;
 #[cfg(feature = "std")]
 use std::mem::swap;
 
@@ -66,21 +68,20 @@ pub fn compute_x<T: Float>(
     a: &[T],
     u: &[T],
 ) -> Result<(), SolverErrors> {
+    let z = T::zero();
     let n = x_buffer.len();
-    for i in (0..n).rev() {
-        let mut sum = T::zero();
-        if i < n - 1 {
-            sum = a[i] * x_buffer[i + 1];
-        }
-        if n > 1 && i < n - 2 {
-            sum = sum + u[i] * x_buffer[i + 2];
-        }
-        let rhs_sum = rhs[i] - sum;
-        let di = d[i];
+    let a_iter = a.iter().chain(iter::once(&z)).rev().cloned();
+    let u_iter = u.iter().chain(iter::repeat(&z).take(2)).rev().cloned();
+    let mut x_pp = z;
+    let mut x_p = z;
+    for (rhsi, di, ai, ui, x) in izip!(rhs.iter().rev().cloned(), d.iter().rev().cloned(), a_iter, u_iter, x_buffer.iter_mut().rev()) {
+        let rhs_sum = rhsi - ai * x_p - ui * x_pp;
         if is_zero_eps_mag(di, rhs_sum) {
             return Err(SolverErrors::DivisionByZero);
         }
-        x_buffer[i] = (rhs_sum) / di;
+        *x = rhs_sum / di;
+        x_pp = x_p;
+        x_p = *x;
     }
     Ok(())
 }
