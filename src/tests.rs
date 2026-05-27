@@ -57,7 +57,7 @@ fn test_ruiz_precond_solver() {
     let sub = [2., 5., 10., 90.];
     let rhs = [-7., 17., -20., 514., -300.];
 
-    let result = solve_givens_ruiz_precond(&sup, &diag, &sub, &rhs, 3, 0.1).unwrap();
+    let result = solve_givens_ruiz_precond(&sup, &diag, &sub, &rhs, 5, 0.01).unwrap();
     let expected = [1., -2., 3., -4., 5.];
 
     assert_abs_diff_eq!(result.as_ref() as &[f64], expected.as_ref(), epsilon = 1e-6);
