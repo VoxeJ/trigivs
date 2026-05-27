@@ -1,7 +1,9 @@
 use crate::prelude::*;
 use crate::solver_error::SolverErrors;
+use itertools::izip;
 use num_traits::float::Float;
 
+use std::iter;
 #[cfg(feature = "std")]
 use std::mem::swap;
 
@@ -66,21 +68,19 @@ pub fn compute_x<T: Float>(
     a: &[T],
     u: &[T],
 ) -> Result<(), SolverErrors> {
-    let n = x_buffer.len();
-    for i in (0..n).rev() {
-        let mut sum = T::zero();
-        if i < n - 1 {
-            sum = a[i] * x_buffer[i + 1];
-        }
-        if n > 1 && i < n - 2 {
-            sum = sum + u[i] * x_buffer[i + 2];
-        }
-        let rhs_sum = rhs[i] - sum;
-        let di = d[i];
+    let z = T::zero();
+    let a_iter = a.iter().chain(iter::once(&z)).rev();
+    let u_iter = u.iter().chain(iter::repeat(&z).take(2)).rev();
+    let mut x_pp = z;
+    let mut x_p = z;
+    for (&rhsi, &di, &ai, &ui, x) in izip!(rhs.iter().rev(), d.iter().rev(), a_iter, u_iter, x_buffer.iter_mut().rev()) {
+        let rhs_sum = rhsi - ai * x_p - ui * x_pp;
         if is_zero_eps_mag(di, rhs_sum) {
             return Err(SolverErrors::DivisionByZero);
         }
-        x_buffer[i] = (rhs_sum) / di;
+        *x = rhs_sum / di;
+        x_pp = x_p;
+        x_p = *x;
     }
     Ok(())
 }
@@ -302,12 +302,13 @@ pub fn get_ruiz_equilibrium_mul<T: Float>(
     for _ in 0..iter {
         let mut max_norm_diff = T::zero();
         for i in 0..n {
-            let mut div = (d_buffer[i]).abs() * col_buffer[i];
+            let row_s = row_buffer[i];
+            let mut div = (d_buffer[i]).abs() * col_buffer[i] * row_s;
             if i < n - 1 {
-                div = div.max(sup_buffer[i].abs() * col_buffer[i + 1]);
+                div = div.max(sup_buffer[i].abs() * col_buffer[i + 1] * row_s);
             }
             if i > 0 {
-                div = div.max(sub_buffer[i - 1].abs() * col_buffer[i - 1]);
+                div = div.max(sub_buffer[i - 1].abs() * col_buffer[i - 1] * row_s);
             }
             div = div.sqrt();
 
@@ -315,9 +316,9 @@ pub fn get_ruiz_equilibrium_mul<T: Float>(
                 return Err(SolverErrors::DivisionByZero);
             }
 
-            let r = T::one() / div;
+            //let r = T::one() / div;
 
-            row_buffer[i] = row_buffer[i] * r;
+            row_buffer[i] = row_buffer[i] / div;
 
             let curr_norm_diff = (div - T::one()).abs();
             if max_norm_diff < curr_norm_diff {
@@ -326,19 +327,19 @@ pub fn get_ruiz_equilibrium_mul<T: Float>(
         }
 
         for i in 0..n {
-            let mut div = d_buffer[i].abs() * row_buffer[i];
+            let col_s = col_buffer[i];
+            let mut div = d_buffer[i].abs() * row_buffer[i] * col_s;
             if i < n - 1 {
-                div = div.max(sub_buffer[i].abs() * row_buffer[i + 1]);
+                div = div.max(sub_buffer[i].abs() * row_buffer[i + 1] * col_s);
             }
             if i > 0 {
-                div = div.max(sup_buffer[i - 1].abs() * row_buffer[i - 1]);
+                div = div.max(sup_buffer[i - 1].abs() * row_buffer[i - 1] * col_s);
             }
             div = div.sqrt();
             if div < T::epsilon() {
                 return Err(SolverErrors::DivisionByZero);
             }
-            let c = T::one() / div;
-            col_buffer[i] = col_buffer[i] * c;
+            col_buffer[i] = col_buffer[i] / div;
 
             let curr_norm_diff = (div - T::one()).abs();
             if max_norm_diff < curr_norm_diff {
