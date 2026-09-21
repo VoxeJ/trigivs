@@ -259,12 +259,17 @@ impl<T: Float, const D: usize, const S: usize> TridiagSysPrecomp<T, D, S> {
 
         let mut x_buffer = [T::zero(); D];
 
+        let sup2 = self.sup2.as_ref().map_or(&[][..], |v| {
+            let len = S.saturating_sub(1);
+            &v[..len]
+        });
+
         compute_x(
             &mut x_buffer,
             &rhsl,
             &self.diag,
             self.sup1.as_ref().map_or(&[], |v| v.as_slice()),
-            self.sup2.as_ref().map_or(&[], |v| v.as_slice()),
+            sup2
         )?;
 
         Ok(x_buffer)
