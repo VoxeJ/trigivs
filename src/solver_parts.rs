@@ -3,16 +3,8 @@ use crate::solver_error::SolverErrors;
 use itertools::izip;
 use num_traits::float::Float;
 
-use std::iter;
-#[cfg(feature = "std")]
-use std::mem::swap;
-
-#[cfg(not(feature = "std"))]
+use core::iter;
 use core::mem::swap;
-
-#[cfg(feature = "std")]
-#[cfg(not(feature = "std"))]
-use rand::rngs::SmallRng;
 
 #[inline]
 pub fn rotate_primary<T: Float>(
